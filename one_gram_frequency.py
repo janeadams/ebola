@@ -36,18 +36,42 @@ def build_corpus(reports, variable_name):
     """    
     # Produce time series of word frequencies in desired column
     
-    time_data = reports[['g_mob_activities/date_of_visit',variable_name]]
+    time_col1 = 'Trig_date'
+    time_col2 = 'Date_of_Visit'
+    
+    # switch from trigger date to visit date depending on which csv is being used
+    if time_col1 in reports:
+        time_data = reports[[time_col1,variable_name]]
+        time_col = time_col1
+          
+    if time_col2 in reports:
+        time_data = reports[[time_col2,variable_name]]
+        time_col = time_col2
+    
     
     time_data_full = time_data.dropna()
     
-    # investigate date range
-    Counter(list(time_data_full['g_mob_activities/date_of_visit']))
-    datetime.datetime.strptime('6/16/2006',"%m/%d/%Y")
     # reformat dates as datetimes
-    dates= list(time_data_full['g_mob_activities/date_of_visit'])
-    dates_formated = [datetime.datetime.strptime(date,"%m/%d/%Y") for date in dates] 
+    dates= list(time_data_full[time_col])
+    # fix weird date
+    
+    dates[484] = '2015-01-15'
+    dates_formated = []
+    for idx,date in enumerate(dates):
+        try:
+            formated_date = datetime.datetime.strptime(date,"%Y-%m-%d")
+            dates_formated.append(formated_date)
+
+        except:
+            ValueError
+            print(idx,date)
+            #drop these rows from data frame
+            time_data_full = time_data_full.drop(time_data_full.index[idx])
+            
+        
     time_data_full['date_f'] = dates_formated
     
+
     # filter data frame to only remove all dates outside of peak outbreak
     upper = time_data_full[time_data_full['date_f'] > datetime.datetime(2014,11,20)];
     peak = upper[time_data_full['date_f'] < datetime.datetime(2015,12,20)];
@@ -100,13 +124,13 @@ def build_timeseries(woi,time_corpus):
     """
     time_corpus_counter = []
     for corpus in time_corpus:
-        
-        corpus_counter = Counter(corpus)
-        woi_counts = corpus_counter[woi]
-
-        rel_counts = woi_counts/len(corpus)
-        if rel_counts != 0:
-            time_corpus_counter.append(rel_counts)
+        if len(corpus) > 0 :
+            corpus_counter = Counter(corpus)
+            woi_counts = corpus_counter[woi]
+    
+            rel_counts = woi_counts/len(corpus)
+            if rel_counts != 0:
+                time_corpus_counter.append(rel_counts)
     return(time_corpus_counter)
     
 def plot_timeseries(time_corpus_counter,woi, text_column):
@@ -144,33 +168,29 @@ def plot_timeseries(time_corpus_counter,woi, text_column):
 
 
 
-
 # load in file
 if __name__ == '__main__':
 
     # load in data
-    reports = pd.read_csv('8247002/digital.csv')
+    reports = pd.read_csv('data/Follow_Up_Other.csv')
     
     # define name of column of interest
-    text_column = 'g_actionstat/action1'
+    text_column = 'f_q5'
     
     # define the dates for time series
     timeseries_x = ['2015-01-31', '2015-03-31', '2015-05-30',  '2015-07-30','2015-09-31', '2015-11-31']
     
-    
     # build corpus from column data
     time_corpus = build_corpus(reports, text_column)
     
-    
     # Example time series plots
-    woi = 'dead'
+    woi = 'ebola'
     counts = build_timeseries(woi,time_corpus)
     plot_timeseries(counts, woi,text_column)
     
     woi = 'meat'
     counts = build_timeseries(woi,time_corpus)
     plot_timeseries(counts, woi,text_column)
-    
     
     woi = 'bush'
     counts = build_timeseries(woi,time_corpus)
