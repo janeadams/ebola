@@ -14,3 +14,13 @@ CSV.write("data/Follow_Up.csv", Follow_Up)
 CSV.write("data/Follow_Up_Other.csv", Follow_Up_Other)
 CSV.write("data/Codebook.csv", Codebook)
 
+
+
+lab_confirmed_cases = DataFrame(XLSX.readtable("data/ChiefdomCasesData.xlsx", "lab-confirmed database")...)
+suspected_cases = DataFrame(XLSX.readtable("data/ChiefdomCasesData.xlsx", "suspected database")...)
+census = DataFrame(XLSX.readtable("data/ChiefdomCensusDataRevised.xlsx", "Chiefdom information")...)
+
+CSV.write("data/lab_confirmed_cases.csv", lab_confirmed_cases)
+CSV.write("data/suspected_cases.csv", suspected_cases)
+CSV.write("data/census.csv", census)
+
