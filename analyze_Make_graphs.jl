@@ -74,9 +74,11 @@ function make_plots(title, hover, pop_total, pop_male, pop_female, conf_total, c
 	savefig("htmlGraphs/$(title)_all.html")
 end
 
-function plot_rank(title, districts, ratio, df)
+#=function plot_rank(prefix, title, districts, ratio, df)
 	ranks = Dict(); for i in 1:length(districts) ranks[ratio[i]] = [] end
 	idx = sortperm(ratio)
+	@show districts
+	@show ranks
 
 	for i in 1:length(districts)
 		for j in 1:length(districts)
@@ -98,12 +100,48 @@ function plot_rank(title, districts, ratio, df)
 		markersize=4, seriestype=:scatter)
 	f, r = line_of_best_fit(x, y)
 	plot!(p, f, label="r=$(r)")
-	savefig(p, "htmlGraphs/spatial_$(title).html")
+	savefig(p, "htmlGraphs/$(prefix)_spatial_$(title).html")
+	return p
+end=#
+
+function plot_rank(prefix, title, data, ratio, df)
+	ranks = Dict(); for i in 1:length(data) ranks[data[i]] = Vector{Float64}() end
+
+	for i in 1:length(data)
+		for j in 1:length(data)
+			if i != j && df[i, j] == 1
+				push!(ranks[data[i]], ratio[j])
+			end
+		end
+	end
+
+	hover = data
+	x = ratio
+	y = []
+	keep_idx = []
+	for i in 1:length(data)
+		if ranks[data[i]] == Vector{Float64}()
+			nothing
+		else
+			push!(keep_idx, i)
+			push!(y, mean(ranks[data[i]]))
+		end
+	end
+	hover = hover[keep_idx]
+	x = ratio[keep_idx]
+
+	p = plot(x, y, hover=hover, title="$(title)",
+		label=nothing, xlabel="# Cases", ylabel="Mean cases of neighbors",
+		markersize=4, seriestype=:scatter)
+	f, r = line_of_best_fit(x, y)
+	plot!(p, f, label="r=$(r)")
+	savefig(p, "htmlGraphs/$(prefix)_spatial_$(title).html")
 	return p
 end
 
 c_df = DataFrame(CSV.read("data/census.csv"))
-a_df = DataFrame(CSV.read("data/adjacency_District.csv"))
+ad_df = DataFrame(CSV.read("data/adjacency_District.csv"))
+ac_df = DataFrame(CSV.read("data/adjacency_Chiefdom.csv"))
 conf_df = DataFrame(CSV.read("data/lab_confirmed_cases.csv"))
 susp_df = DataFrame(CSV.read("data/suspected_cases.csv"))
 
@@ -142,6 +180,27 @@ for c in chiefdoms
 end
 make_plots("Chiefdom", chiefdoms, pop_total, pop_male, pop_female, conf_total, conf_male, conf_female, susp_total, susp_male, susp_female)
 
+ratio_conf = conf_total ./ pop_total
+p1 = plot_rank("Chiefdom", "Total", chiefdoms, ratio_conf, ac_df);
+
+ratio_conf_susp = (conf_total .+ susp_total) ./ pop_total
+p2 = plot_rank("Chiefdom", "Total+", chiefdoms, ratio_conf_susp, ac_df);
+
+ratio_male_conf = conf_male ./ pop_male
+p3 = plot_rank("Chiefdom", "Male", chiefdoms, ratio_male_conf, ac_df);
+
+ratio_male_conf_susp = (conf_male .+ susp_male) ./ pop_male
+p4 = plot_rank("Chiefdom", "Male+", chiefdoms, ratio_male_conf_susp, ac_df);
+
+ratio_female_conf = conf_female ./ pop_female
+p5 = plot_rank("Chiefdom", "Female", chiefdoms, ratio_female_conf, ac_df);
+
+ratio_female_conf_susp = (conf_female .+ susp_female) ./ pop_female
+p6 = plot_rank("Chiefdom", "Female+", chiefdoms, ratio_female_conf_susp, ac_df);
+
+plot(p1, p2, p3, p4, p5, p6, titleloc = :left, titlefont = font(10), legend=true, layout=(3,2), size=(1200, 900));
+savefig("htmlGraphs/Chiefdom_Spatial_all.html");
+
 
 
 
@@ -179,25 +238,25 @@ make_plots("District", districts, pop_total, pop_male, pop_female, conf_total, c
 
 
 ratio_conf = conf_total ./ pop_total
-p1 = plot_rank("Total", districts, ratio_conf, a_df);
+p1 = plot_rank("District", "Total", districts, ratio_conf, ad_df);
 
 ratio_conf_susp = (conf_total .+ susp_total) ./ pop_total
-p2 = plot_rank("Total+", districts, ratio_conf_susp, a_df);
+p2 = plot_rank("District", "Total+", districts, ratio_conf_susp, ad_df);
 
 ratio_male_conf = conf_male ./ pop_male
-p3 = plot_rank("Male", districts, ratio_male_conf, a_df);
+p3 = plot_rank("District", "Male", districts, ratio_male_conf, ad_df);
 
 ratio_male_conf_susp = (conf_male .+ susp_male) ./ pop_male
-p4 = plot_rank("Male+", districts, ratio_male_conf_susp, a_df);
+p4 = plot_rank("District", "Male+", districts, ratio_male_conf_susp, ad_df);
 
 ratio_female_conf = conf_female ./ pop_female
-p5 = plot_rank("Female", districts, ratio_female_conf, a_df);
+p5 = plot_rank("District", "Female", districts, ratio_female_conf, ad_df);
 
 ratio_female_conf_susp = (conf_female .+ susp_female) ./ pop_female
-p6 = plot_rank("Female+", districts, ratio_female_conf_susp, a_df);
+p6 = plot_rank("District", "Female+", districts, ratio_female_conf_susp, ad_df);
 
 plot(p1, p2, p3, p4, p5, p6, titleloc = :left, titlefont = font(10), legend=true, layout=(3,2), size=(1200, 900));
-savefig("htmlGraphs/Spatial_all.html");
+savefig("htmlGraphs/District_Spatial_all.html");
 
 
 
